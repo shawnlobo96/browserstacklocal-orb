@@ -1,15 +1,232 @@
 version: 2.1
 
-description: >
-  Sample orb description
-# What will your orb allow users to accomplish?
-# Descriptions should be short, simple, and informative.
-
-# This information will be displayed in the orb registry and is not mandatory.
+description: |
+  Test web applications on internal development environments by utilizing the secure and encrypted
+  BrowserStack tunnel (Local binary). Our local binary uses secure WebSockets (WSS) to ensure
+  the security and privacy of your data.
 display:
-  home_url: "https://www.website.com/docs"
-  source_url: "https://www.github.com/EXAMPLE_ORG/EXAMPLE_PROJECT"
+  home_url: https://www.browserstack.com/
+  source_url: https://github.com/shawnlobo96/browserstacklocal-orb
 
-# If your orb requires other orbs, you can import them like this. Otherwise remove the "orbs" stanza.
-# orbs:
-#  hello: circleci/hello-build@0.0.5
+commands:
+  download:
+    description: |
+      Download the local testing binary
+    steps:
+      - run:
+          name: "Download and Extract BrowserStackLocal binary"
+          command: |
+            sudo apt-get update && sudo apt-get install -y curl unzip
+            wget "https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-x64.zip"
+            unzip BrowserStackLocal-linux-x64.zip
+            chmod +x BrowserStackLocal
+  start_local:
+    description: |
+      Setup BrowserStackLocal parameters
+    parameters:
+      docker:
+        type: string
+        default: "cimg/node:lts"
+      access_key:
+        type: env_var_name
+        default: BROWSERSTACK_ACCESS_KEY
+      local_identifier:
+        type: string
+        default: ""
+      force_local:
+        type: boolean
+        default: false
+      proxy_host:
+        type: string
+        default: ""
+      proxy_port:
+        type: string
+        default: ""
+      proxy_user:
+        type: string
+        default: ""
+      proxy_pass:
+        type: string
+        default: ""
+      force_proxy:
+        type: boolean
+        default: false
+      local_proxy_host:
+        type: string
+        default: ""
+      local_proxy_port:
+        type: string
+        default: ""
+      local_proxy_user:
+        type: string
+        default: ""
+      local_proxy_pass:
+        type: string
+        default: ""
+      log_file:
+        type: string
+        default: ""
+      verbose:
+        type: integer
+        default: 0
+    steps:
+      - run:
+          name: "Start the BrowserStackLocal binary"
+          background: true
+          command: |
+            if [ -z "$<<parameters.access_key>>" ]; then
+              echo "Please specify the BROWSERSTACK_ACCESS_KEY environment variable"
+              exit 1
+            fi
+            ./BrowserStackLocal --key ${<<parameters.access_key>>} --disable-dashboard --daemon start \
+            <<# parameters.local_identifier >> --local-identifier <<parameters.local_identifier>> \
+            <</ parameters.local_identifier>>
+            <<# parameters.force_local >> --force-local  \
+            <</ parameters.force_local>>
+            <<# parameters.proxy_host >> --proxy-host <<parameters.proxy_host>> \
+            <</ parameters.proxy_host>>
+            <<# parameters.proxy_host >> --proxy-host <<parameters.proxy_host>> \
+            <</ parameters.proxy_host>>
+            <<# parameters.proxy_port >> --proxy-port <<parameters.proxy_port>> \
+            <</ parameters.proxy_port>>
+            <<# parameters.proxy_user >> --proxy-user <<parameters.proxy_user>> \
+            <</ parameters.proxy_user>>
+            <<# parameters.proxy_pass >> --proxy-pass <<parameters.proxy_pass>> \
+            <</ parameters.proxy_pass>>
+            <<# parameters.force_proxy >> --force-proxy  \
+            <</ parameters.force_proxy>>
+            <<# parameters.local_proxy_host >> --local-proxy-host <<parameters.local_proxy_host>> \
+            <</ parameters.local_proxy_host>>
+            <<# parameters.local_proxy_port >> --local-proxy-port <<parameters.local_proxy_port>> \
+            <</ parameters.local_proxy_port>>
+            <<# parameters.local_proxy_user >> --local-proxy-user <<parameters.local_proxy_user>> \
+            <</ parameters.local_proxy_user>>
+            <<# parameters.local_proxy_pass >> --local-proxy-pass <<parameters.local_proxy_pass>> \
+            <</ parameters.local_proxy_pass>>
+            <<# parameters.verbose >> --verbose <<parameters.verbose>> \
+            <</ parameters.verbose>>
+            <<# parameters.log_file >> --log-file <<parameters.log_file>>
+            <</ parameters.log_file>>
+  stop_local:
+    description: |
+      Teardown BrowserStackLocal tunnel connection
+    parameters:
+      access_key:
+        type: env_var_name
+        default: BROWSERSTACK_ACCESS_KEY
+    steps:
+      - run:
+          name: Stop BrowserStackLocal daemon
+          requires: |
+            start_local
+          command: |
+            if [ -z "$<<parameters.access_key>>" ]; then
+              echo "Please specify the BROWSERSTACK_ACCESS_KEY environment variable"
+              exit 1
+            fi
+            ./BrowserStackLocal --key ${<<parameters.access_key>>} --daemon stop
+          when: always
+
+jobs:
+  BrowserStack Local Start:
+    description: Setup BrowserStack local testing
+    docker:
+      - image: <<parameters.executor>>
+    parameters:
+      executor:
+        description: Used to set up execution environment for running your script. Refer https://circleci.com/developer/images
+        type: string
+        default: "cimg/node:lts"
+      access_key:
+        description: |
+          It is your private and unique Access Key assigned by Browserstack. The Access Key is required to set up a Local Testing connection.
+          You can obtain this key from the local testing section of the Settings page: https://www.browserstack.com/accounts/settings
+        type: env_var_name
+        default: BROWSERSTACK_ACCESS_KEY
+      local_identifier:
+        description: |
+          If you are running multiple copies of BrowserStackLocal binary (for better performance or other reasons), please specify unique strings for BrowserStack to uniquely identify them.
+          You will need to specify the same string in Automate tests as well.
+        type: string
+        default: ""
+      force_local:
+        description: |
+          This flag will ensure that, regardless of any other setting, no asset will be resolved via the public internet and any resolution of URLs that your BrowserStack device does will be routed through the Local tunnel.
+          This flag is typically used to ensure compliance with your network policies.
+        type: boolean
+        default: false
+      proxy_host:
+        description: If you are behind the corporate proxy setup, please specify your proxy host using this option. Host URL/IP
+        type: string
+        default: ""
+      proxy_port:
+        description: If you are behind the corporate proxy setup, please specify your proxy port using this option. The default value is 3128.
+        type: string
+        default: ""
+      proxy_user:
+        description: If you are behind a corporate proxy which requires authentication, please specify your proxy username using this option. As of now, only HTTP Basic authentication is supported.
+        type: string
+        default: ""
+      proxy_pass:
+        description: If you are behind a corporate proxy which requires authentication, please specify your proxy password using this option. As of now, only HTTP Basic authentication is supported.
+        type: string
+        default: ""
+      force_proxy:
+        description: This options routes all traffic via the proxy specified - otherwise, binary tries to connect directly as well for better performance.
+        type: boolean
+        default: false
+      local_proxy_host:
+        description: If your local server is behind a proxy or you are using a proxy to log all communication to your local servers - please specify your proxy host using this option.
+        type: string
+        default: ""
+      local_proxy_port:
+        description: If your local server is behind a proxy or you are using a proxy to log all communication to your local servers - please specify your proxy port using this option. Default assumed is 8081.
+        type: string
+        default: ""
+      local_proxy_user:
+        description: If your local server is behind a proxy, and it requires authentication - please specify your proxy username using this option.
+        type: string
+        default: ""
+      local_proxy_pass:
+        description: If your local server is behind a proxy, and it requires authentication - please specify your proxy password using this option.
+        type: string
+        default: ""
+      log_file:
+        description: |
+          Logs all the output to the file specified
+          Note: Specify a file name. File can be downloaded from the Artifacts tab after the workflow has completed.
+        type: string
+        default: ""
+      verbose:
+        description: This option sets the level of logging required. Set 1 to debug issues related to setting up connections. Set 2 for logs related to network information. Set 3 to dump all communication to local servers for each request and response. The default value for this option is 1
+        type: integer
+        default: 0
+      steps:
+        description: Commands to initiate the test
+        type: steps
+
+    steps:
+      - checkout
+      - download
+      - start_local:
+          access_key: <<parameters.access_key>>
+          local_identifier: <<parameters.local_identifier>>
+          force_local: <<parameters.force_local>>
+          proxy_host: <<parameters.proxy_host>>
+          proxy_port: <<parameters.proxy_port>>
+          proxy_user: <<parameters.proxy_user>>
+          proxy_pass: <<parameters.proxy_pass>>
+          force_proxy: <<parameters.force_proxy>>
+          local_proxy_host: <<parameters.local_proxy_host>>
+          local_proxy_port: <<parameters.local_proxy_port>>
+          local_proxy_user: <<parameters.local_proxy_user>>
+          local_proxy_pass: <<parameters.local_proxy_pass>>
+          log_file: <<parameters.log_file>>
+          verbose: <<parameters.verbose>>
+      - steps: << parameters.steps >>
+      - stop_local:
+          access_key: <<parameters.access_key>>
+      - store_artifacts:
+          path: /tmp/
+      - store_artifacts:
+          path: <<parameters.log_file>>

@@ -1,13 +1,18 @@
-description: >
-  Sample example description.
-# Provide a use-case based example for using this orb.
-# Everything in the `usage` section will be displayed in the orb registry.
-# Comments are not retained.
+description: Sample usage
 usage:
   version: 2.1
   orbs:
-    <orb-name>: <namespace>/<orb-name>@1.2.3
+    bs_local: shawnlobo96/browserstack-local@volatile
   workflows:
-    use-my-orb:
+    initialize_test:
       jobs:
-        - <orb-name>/<job-name>
+        - bs_local/BrowserStack Local Start:
+            access_key: BROWSERSTACK_ACCESS_KEY
+            log_file: bs_local.log
+            force_local: false
+            verbose: 3
+            steps:
+              - run:
+                  command: |
+                    npm install
+                    node test.js
