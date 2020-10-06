@@ -1,0 +1,18 @@
+description: Sample usage
+usage:
+  version: 2.1
+  orbs:
+    bs_local: shawnlobo96/browserstack-local@volatile
+  workflows:
+    initialize_test:
+      jobs:
+        - bs_local/BrowserStack Local Start:
+            access_key: BROWSERSTACK_ACCESS_KEY
+            log_file: bs_local.log
+            force_local: false
+            verbose: 3
+            steps:
+              - run:
+                  command: |
+                    npm install
+                    node test.js

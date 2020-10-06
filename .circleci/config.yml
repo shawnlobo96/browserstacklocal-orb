@@ -27,6 +27,19 @@ jobs:
       - image: cimg/node:lts
     steps:
       - checkout
+      - browserstack-local/download
+      - browserstack-local/start_local:
+          access_key: BROWSERSTACK_ACCESS_KEY
+          docker: cimg/node:lts
+      - run:
+          command: |
+            cd ~/project/src/tests/
+            npm -v
+            node -v
+            npm install
+            node test.js
+      - browserstack-local/stop_local:
+        access_key: BROWSERSTACK_ACCESS_KEY
 
 workflows:
   # Prior to producing a development orb (which requires credentials) basic validation, linting, and even unit testing can be performed.
